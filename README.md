@@ -45,20 +45,14 @@ An intelligent Ecommerce Agent built using [DSPy](https://github.com/stanfordnlp
 git clone https://github.com/ngi-samples/Ecommerce-agent.git
 cd dspy-agent
 2. Install dependencies
-bash
-Copy
-Edit
+
 pip install -r requirements.txt
 If requirements.txt is not available, manually install:
 
-bash
-Copy
-Edit
+
 pip install dspy openai flask
 3. Run the server
-bash
-Copy
-Edit
+
 python server.py
 4. Access frontend
 Open your browser and visit:
