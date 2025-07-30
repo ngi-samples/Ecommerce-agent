@@ -63,14 +63,10 @@ python server.py
 4. Access frontend
 Open your browser and visit:
 
-arduino
-Copy
-Edit
-http://localhost:5000
+
+http://localhost:8000
 🧪 Running Tests
-bash
-Copy
-Edit
+
 python test_cart.py
 python test_compare.py
 📁 Data Format
