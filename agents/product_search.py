@@ -1,33 +1,43 @@
-import dspy
-import json
+# agents/product_search.py
+from dspy import Module, InputField, OutputField, Signature, ChainOfThought
+from dspy.teleprompt import BootstrapFewShot
+from db import products_collection
 
-with open("data/amazon_mock_products.json", "r") as f:
-    products = json.load(f)
+# Fetch products
+db_products = list(products_collection.find({}, {"_id": 0}))
+print(f"✅ Loaded {len(db_products)} products.")
 
-class ProductSearchSignature(dspy.Signature):
-    """Signature is like prescribing that input and output outline should be"""
-    query: str = dspy.InputField(desc="What the user is looking for")
-    response: str = dspy.OutputField(desc="Recommended products based on the query")
-    
-class ProductSearchModule(dspy.Module):
-    """A Module in DSPy is a reusable component that encapsulates logic """
+# === Signature ===
+class ProductSearchSignature(Signature):
+    query: str = InputField(desc="User's search query")
+    products_list: str = InputField(desc="List of products with title, price, rating")
+    response: str = OutputField(desc="Top 3 relevant products with reasons")
+
+class ProductSearchModule(Module):
     def __init__(self, products):
         super().__init__()
-        self.generator = dspy.Predict(ProductSearchSignature)
-        """Here generator acts as a predictor of your signature (i.e .., Your Input and Output outline)"""
+        self.predictor = ChainOfThought(ProductSearchSignature)
+        self.products = products
+
     def forward(self, query):
-        # Format the product list for prompting
         product_text = "\n".join(
-            f"{i+1}. {p['title']} - ₹{p['price']} - {p['rating']}⭐\n   {p['description']}"
-            for i, p in enumerate(products[:20])  # include only top 20 to limit context
+            f"{i+1}. {p['title']} - ₹{p['price']} - ⭐{p['rating']}"
+            for i, p in enumerate(self.products[:20])
         )
+        result = self.predictor(query=query, products_list=product_text)
+        return result
 
-        prompt = (
-            f"You are an eCommerce assistant.\n"
-            f"User query: {query}\n\n"
-            f"Here is a list of available products:\n{product_text}\n\n"
-            f"From the list above, recommend the most relevant 3 products."
-        )
+# Training data
+trainset = [
+    # ... (your examples)
+]
 
-        result = self.generator(query=prompt)
-        return result.response
+def evaluate_quality(gold, pred, trace=None):
+    return "1." in pred.response and "2." in pred.response and "3." in pred.response
+
+def compile_optimized_search(products):
+    unoptimized = ProductSearchModule(products=products)
+    optimizer = BootstrapFewShot(metric=evaluate_quality, max_labeled_demos=3)
+    return optimizer.compile(unoptimized, trainset=trainset)
+
+optimized_search = compile_optimized_search(db_products)
